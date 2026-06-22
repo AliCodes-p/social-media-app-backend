@@ -1,17 +1,19 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Boolean, DateTime
 from app.db.database import Base
+from datetime import datetime, timedelta
+
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
+    username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
 
-    hashed_password = Column(String, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
 
-    is_verified = Column(Boolean, default=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    

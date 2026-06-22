@@ -1,7 +1,12 @@
-from fastapi import APIRouter
+from pydantic_settings import BaseSettings
 
-router = APIRouter()
 
-@router.get("/")
-def root():
-    return {"message": "Backend is running"}
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    DATABASE_URL: str
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings() #type: ignore

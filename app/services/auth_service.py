@@ -1,0 +1,94 @@
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from passlib.context import CryptContext
+from fastapi import HTTPException
+from datetime import datetime, timedelta, timezone
+import random
+
+from app.models.user import User
+from app.models.otp_verification import OTPVerification
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+# -------------------------
+# AUTHENTICATE USER
+# -------------------------
+def authenticate_user(db: Session, email: str, password: str):
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        return None
+
+    if not user.is_verified:
+        return None
+
+    if not verify_password(password, user.hashed_password):
+        return None
+
+    return user
+
+
+# -------------------------
+# PASSWORD HASHING
+# -------------------------
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+# -------------------------
+# OTP GENERATION
+# -------------------------
+def generate_otp() -> str:
+    return str(random.randint(100000, 999999))
+
+
+def get_otp_expiry() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(minutes=5)
+
+
+# -------------------------
+# REGISTER USER (FIXED - OTP TABLE VERSION)
+# -------------------------
+def register_user(db: Session, username: str, email: str, password: str):
+
+    existing_user = db.query(User).filter(
+        or_(User.username == username, User.email == email)
+    ).first()
+
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username or email already exists")
+
+    # 1. Create user
+    user = User(
+        username=username,
+        email=email,
+        hashed_password=hash_password(password),
+        is_verified=False
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    # 2. Create OTP in separate table
+    otp = generate_otp()
+    expiry = get_otp_expiry()
+
+    otp_entry = OTPVerification(
+        user_id=user.id,
+        otp_code=otp,
+        purpose="register",
+        expires_at=expiry,
+        is_used=False
+    )
+
+    db.add(otp_entry)
+    db.commit()
+
+    return user
