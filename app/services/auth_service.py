@@ -30,6 +30,35 @@ def authenticate_user(db: Session, email: str, password: str):
     return user
 
 
+def validate_login_credentials(db: Session, email: str, password: str):
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        return None, "invalid_credentials"
+
+    if not verify_password(password, user.hashed_password):
+        return None, "invalid_credentials"
+
+    if not user.is_verified:
+        return None, "unverified"
+
+    return user, None
+
+
+def create_otp(db: Session, user_id: int, purpose: str) -> OTPVerification:
+    otp_entry = OTPVerification(
+        user_id=user_id,
+        otp_code=generate_otp(),
+        purpose=purpose,
+        expires_at=get_otp_expiry(),
+        is_used=False,
+    )
+    db.add(otp_entry)
+    db.commit()
+    db.refresh(otp_entry)
+    return otp_entry
+
+
 # -------------------------
 # PASSWORD HASHING
 # -------------------------

@@ -1,9 +1,7 @@
 from pydantic_settings import BaseSettings
 
 
-class Settings(BaseSettings):
-    SECRET_KEY: str
-    DATABASE_URL: str
+class OAuthSettings(BaseSettings):
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None
     GITHUB_CLIENT_ID: str | None = None
@@ -15,4 +13,4 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 
-settings = Settings() #type: ignore
+oauth_settings = OAuthSettings()
