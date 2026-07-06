@@ -1,9 +1,12 @@
+import profile
+
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from passlib.context import CryptContext
 from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone
 import random
+from app.models.profile import Profile
 
 from app.models.user import User
 from app.models.otp_verification import OTPVerification
@@ -24,8 +27,12 @@ def authenticate_user(db: Session, email: str, password: str):
     if not user.is_verified:
         return None
 
-    if not verify_password(password, user.hashed_password):
+    # OAuth-only user check
+    if user.hashed_password is None:
         return None
+
+    if not verify_password(password, user.hashed_password):
+       return None
 
     return user
 
@@ -35,6 +42,10 @@ def validate_login_credentials(db: Session, email: str, password: str):
 
     if not user:
         return None, "invalid_credentials"
+
+    # OAuth-only account
+    if user.hashed_password is None:
+        return user, "oauth_user"
 
     if not verify_password(password, user.hashed_password):
         return None, "invalid_credentials"
@@ -104,6 +115,12 @@ def register_user(db: Session, username: str, email: str, password: str):
     db.add(user)
     db.commit()
     db.refresh(user)
+    profile = Profile(
+    user_id=user.id
+    )
+
+    db.add(profile)
+    db.commit()
 
     # 2. Create OTP in separate table
     otp = generate_otp()

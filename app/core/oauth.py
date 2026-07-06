@@ -230,7 +230,14 @@ async def handle_oauth_callback(
     return redirect_response
 
 
-def _get_or_create_oauth_user(db: Session, provider: str, provider_user_id: str, email: str) -> User:
+def _get_or_create_oauth_user(
+    db: Session,
+    provider: str,
+    provider_user_id: str,
+    email: str,
+) -> User:
+
+    # 1. Existing OAuth link
     existing_link = (
         db.query(OAuthAccount)
         .filter(
@@ -239,36 +246,56 @@ def _get_or_create_oauth_user(db: Session, provider: str, provider_user_id: str,
         )
         .first()
     )
+
     if existing_link:
         user = (
             db.query(User)
             .filter(User.id == existing_link.user_id)
             .first()
         )
+
         if user:
             return user
 
+    # 2. Existing email/password account
     existing_user = db.query(User).filter(User.email == email).first()
+
     if existing_user:
-        db.add(
-            OAuthAccount(
-                user_id=existing_user.id,
-                provider=provider,
-                provider_user_id=provider_user_id,
+
+        existing_oauth = (
+            db.query(OAuthAccount)
+            .filter(
+                OAuthAccount.user_id == existing_user.id,
+                OAuthAccount.provider == provider,
             )
+            .first()
         )
+
+        if not existing_oauth:
+            db.add(
+                OAuthAccount(
+                    user_id=existing_user.id,
+                    provider=provider,
+                    provider_user_id=provider_user_id,
+                )
+            )
+
         existing_user.is_verified = True
         db.commit()
         db.refresh(existing_user)
+
         return existing_user
 
+    # 3. Brand new OAuth user
     username = _build_unique_username(db, email)
+
     user = User(
         username=username,
         email=email,
-        hashed_password=hash_password(secrets.token_urlsafe(24)),
+        hashed_password=None,
         is_verified=True,
     )
+
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -280,8 +307,10 @@ def _get_or_create_oauth_user(db: Session, provider: str, provider_user_id: str,
             provider_user_id=provider_user_id,
         )
     )
+
     db.commit()
     db.refresh(user)
+
     return user
 
 

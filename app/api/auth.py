@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from dbm import error
+from app.models.oauth_account import OAuthAccount
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
@@ -40,7 +42,7 @@ from app.schemas.password_reset import (
 from app.services.auth_service import hash_password
 from app.services.refresh_token_service import revoke_all_user_refresh_tokens
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter(tags=["Auth"])
 
 
 @router.get("/oauth/{provider}")
@@ -94,6 +96,28 @@ async def register(
     body: RegisterRequest,
     db: Session = Depends(get_db),
 ):
+    # -----------------------------------
+    # 🚨 BLOCK OAuth-only existing users
+    # -----------------------------------
+    existing_user = db.query(User).filter(User.email == body.email).first()
+
+    if existing_user:
+        # If user exists but has NO password → OAuth user
+        if existing_user.hashed_password is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Account exists with Google/GitHub. Please login using OAuth."
+            )
+
+        # If normal user already exists → prevent duplicate registration
+        raise HTTPException(
+            status_code=400,
+            detail="User with this email already exists"
+        )
+
+    # -----------------------------------
+    # 🧑 Create user + OTP
+    # -----------------------------------
     user = register_user(db, body.username, body.email, body.password)
 
     otp_entry = get_latest_otp(db, user.id, "register")
@@ -101,16 +125,28 @@ async def register(
     if not otp_entry:
         db.delete(user)
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to create OTP. Please try again.")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create OTP. Please try again."
+        )
 
+    # -----------------------------------
+    # 📧 Send OTP email
+    # -----------------------------------
     try:
         await send_otp_email(body.email, otp_entry.otp_code)
     except Exception:
         db.delete(otp_entry)
         db.delete(user)
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to send OTP email. Please try again.")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send OTP email. Please try again."
+        )
 
+    # -----------------------------------
+    # ✅ Success response
+    # -----------------------------------
     return {
         "message": "User created. OTP sent to email.",
         "user_id": user.id,
@@ -123,30 +159,50 @@ async def register(
 @router.post("/login")
 async def login(
     body: LoginRequest,
+    response: Response,
     db: Session = Depends(get_db),
 ):
     user, error = validate_login_credentials(db, body.email, body.password)
 
     if error == "invalid_credentials":
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+      raise HTTPException(
+        status_code=401,
+        detail="Invalid email or password"
+    )
+
+    if error == "oauth_user":
+      oauth_account = (
+        db.query(OAuthAccount)
+        .filter(OAuthAccount.user_id == user.id) 
+        .first()
+      )
+
+      provider = (
+        oauth_account.provider.title()
+        if oauth_account
+        else "Google/GitHub"
+      )
+
+      raise HTTPException(
+        status_code=400,
+        detail=f"This account uses {provider} sign-in. Please sign in with {provider}."
+    )
 
     if error == "unverified":
-        raise HTTPException(status_code=403, detail="Please verify your email first")
+     raise HTTPException(
+        status_code=403,
+        detail="Please verify your email first"
+     )
 
     if user is None:
-        raise HTTPException(status_code=500, detail="Unable to process login request")
+     raise HTTPException(
+        status_code=500,
+        detail="Unable to process login request"
+     )
 
-    otp_entry = create_otp(db, user.id, "login")
+    issue_auth_tokens(response, db, user)
 
-    try:
-        await send_otp_email(body.email, otp_entry.otp_code)
-    except Exception:
-        db.delete(otp_entry)
-        db.commit()
-        raise HTTPException(status_code=500, detail="Failed to send OTP email. Please try again.")
-
-    return {"message": "OTP sent to your email."}
-
+    return {"message": "Login successful"}
 
 # -------------------------
 # VERIFY OTP
@@ -157,7 +213,7 @@ def verify_otp(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    if body.purpose not in ("register", "login"):
+    if body.purpose != "register":
         raise HTTPException(status_code=400, detail="Invalid OTP purpose")
 
     user = db.query(User).filter(User.email == body.email).first()
@@ -165,8 +221,7 @@ def verify_otp(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if body.purpose == "login" and not user.is_verified:
-        raise HTTPException(status_code=403, detail="Please verify your email first")
+    
 
     otp_entry = get_latest_otp(db, user.id, body.purpose)
     validate_otp_entry(otp_entry, body.otp)
@@ -180,10 +235,14 @@ def verify_otp(
         user.is_verified = True
 
     db.commit()
-
     issue_auth_tokens(response, db, user)
 
-    return {"message": "Verification successful"}
+    return {
+    "message": "Email verified successfully" 
+    }
+
+   
+    
 
 
 # -------------------------
@@ -194,7 +253,7 @@ async def resend_otp(
     body: ResendOtpRequest,
     db: Session = Depends(get_db),
 ):
-    if body.purpose not in ("register", "login"):
+    if body.purpose != "register":
         raise HTTPException(status_code=400, detail="Invalid OTP purpose")
 
     user = db.query(User).filter(User.email == body.email).first()
@@ -202,23 +261,22 @@ async def resend_otp(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if body.purpose == "register" and user.is_verified:
+    if user.is_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
 
-    if body.purpose == "login" and not user.is_verified:
-        raise HTTPException(status_code=403, detail="Please verify your email first")
-
-    otp_entry = create_otp(db, user.id, body.purpose)
+    otp_entry = create_otp(db, user.id, "register")
 
     try:
         await send_otp_email(body.email, otp_entry.otp_code)
     except Exception:
         db.delete(otp_entry)
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to send OTP email. Please try again.")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send OTP email. Please try again."
+        )
 
     return {"message": "OTP resent to your email."}
-
 
 # -------------------------
 # GET CURRENT USER
@@ -286,6 +344,23 @@ async def forgot_password(
 
     if not user:
         raise HTTPException(status_code=404, detail="User with this email does not exist")
+    if user.hashed_password is None:
+     oauth_account = (
+        db.query(OAuthAccount)
+        .filter(OAuthAccount.user_id == user.id)
+        .first()
+     )
+
+     provider = (
+        oauth_account.provider.title()
+        if oauth_account
+        else "Google/GitHub"
+     )
+
+     raise HTTPException(
+        status_code=400,
+        detail=f"This account uses {provider} sign-in. Please sign in using {provider}."
+    )
 
     # Create OTP for reset_password
     otp_entry = create_otp(db, user.id, "reset_password")

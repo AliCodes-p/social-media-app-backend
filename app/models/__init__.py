@@ -2,3 +2,9 @@ from .user import User
 from .refresh_token import RefreshToken
 from .otp_verification import OTPVerification
 from .oauth_account import OAuthAccount
+from .user import User
+from .post import Post
+from .comment import Comment
+from .like import Like
+from .share import Share
+from .profile import Profile

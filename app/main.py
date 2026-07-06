@@ -3,8 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router as root_router
 from app.api.auth import router as auth_router
+from app.api.post import router as post_router
+from app.api.user import router as users_router
+from app.api.feed import router as feed_router
+from app.api.comment import router as comment_router
+from app.api.likes import router as like_router
+from app.api.share import router as share_router
 
-app = FastAPI()
+app = FastAPI(
+    title="Social Media App",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,5 +26,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Root routes (health check, etc.)
 app.include_router(root_router)
-app.include_router(auth_router)
+
+# Auth routes
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+
+# Post routes
+app.include_router(post_router)
+
+# User routes
+app.include_router(users_router)
+
+#feed routes
+app.include_router(feed_router)
+
+# Comment routes
+app.include_router(comment_router)
+
+# Like routes
+app.include_router(like_router)
+
+# Share routes
+app.include_router(share_router)
