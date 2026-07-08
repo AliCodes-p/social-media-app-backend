@@ -14,6 +14,11 @@ from app.services.permission_dependency import verify_post_owner
 # CREATE POST
 # =========================
 def create_post(db: Session, post_data: PostCreate, current_user: User):
+    if not post_data.content.strip() and not post_data.image_url:
+     raise HTTPException(
+        status_code=400,
+        detail="Post must contain text or an image."
+    )
     new_post = Post(
         content=post_data.content,
         image_url=post_data.image_url,

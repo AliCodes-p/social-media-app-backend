@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import HTTPException
 from fastapi import UploadFile
+from app.models.like import Like
 from app.models.post import Post
 
 from app.services.upload_service import upload_image
@@ -36,17 +37,64 @@ def get_all_users(db: Session):
     return result
 def get_user_by_username(db: Session, username: str):
 
-    user = (
+    result = (
         db.query(User, Profile)
         .join(User.profile)
         .filter(User.username == username)
         .first()
     )
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
 
-    user, profile = user
+    user, profile = result
+
+    posts = (
+        db.query(Post)
+        .filter(
+            Post.user_id == user.id,
+            Post.status == "active"
+        )
+        .all()
+    )
+
+    profile_posts = []
+
+    for post in posts:
+
+        likes_count = (
+            db.query(Like)
+            .filter(Like.post_id == post.id)
+            .count()
+        )
+
+        # For another user's profile, initially false
+        liked_by_me = False
+
+        profile_posts.append({
+            "id": f"post_{post.id}",
+            "type": "post",
+
+            "post_id": post.id,
+            "user_id": post.user_id,
+
+            "content": post.content,
+            "image_url": post.image_url,
+            "status": post.status,
+
+            "created_at": post.created_at,
+            "updated_at": post.updated_at,
+
+            "is_shared": False,
+            "shared_by_user_id": None,
+            "shared_at": None,
+
+            "likes_count": likes_count,
+            "liked_by_me": liked_by_me,
+        })
 
     return {
         "id": user.id,
@@ -54,6 +102,7 @@ def get_user_by_username(db: Session, username: str):
         "bio": profile.bio,
         "avatar_url": profile.avatar_url,
         "cover_url": profile.cover_url,
+        "posts": profile_posts
     }
 def search_users(db: Session, query: str):
 
@@ -173,9 +222,12 @@ def get_my_profile(db: Session, current_user: User):
     )
 
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found"
+        )
 
-    active_posts = (
+    posts = (
         db.query(Post)
         .filter(
             Post.user_id == current_user.id,
@@ -184,19 +236,62 @@ def get_my_profile(db: Session, current_user: User):
         .all()
     )
 
+    profile_posts = []
+
+    for post in posts:
+
+        likes_count = (
+            db.query(Like)
+            .filter(Like.post_id == post.id)
+            .count()
+        )
+
+        liked_by_me = (
+            db.query(Like)
+            .filter(
+                Like.post_id == post.id,
+                Like.user_id == current_user.id
+            )
+            .first()
+            is not None
+        )
+
+        profile_posts.append({
+            "id": f"post_{post.id}",
+            "type": "post",
+
+            "post_id": post.id,
+            "user_id": post.user_id,
+
+            "content": post.content,
+            "image_url": post.image_url,
+            "status": post.status,
+
+            "created_at": post.created_at,
+            "updated_at": post.updated_at,
+
+            "is_shared": False,
+            "shared_by_user_id": None,
+            "shared_at": None,
+
+            "likes_count": likes_count,
+            "liked_by_me": liked_by_me,
+        })
+
+
     return {
         "id": current_user.id,
         "username": current_user.username,
         "bio": profile.bio,
         "avatar_url": profile.avatar_url,
         "cover_url": profile.cover_url,
-        "posts": active_posts
+        "posts": profile_posts
     }
 #=========================Get my archived posts==========================
 
 def get_my_archived_posts(db: Session, current_user: User):
 
-    return (
+    posts = (
         db.query(Post)
         .filter(
             Post.user_id == current_user.id,
@@ -204,3 +299,47 @@ def get_my_archived_posts(db: Session, current_user: User):
         )
         .all()
     )
+
+    archived_posts = []
+
+    for post in posts:
+
+        likes_count = (
+            db.query(Like)
+            .filter(Like.post_id == post.id)
+            .count()
+        )
+
+        liked_by_me = (
+            db.query(Like)
+            .filter(
+                Like.post_id == post.id,
+                Like.user_id == current_user.id,
+            )
+            .first()
+            is not None
+        )
+
+        archived_posts.append({
+         "id": f"post_{post.id}",
+         "type": "post",
+
+         "post_id": post.id,
+         "user_id": post.user_id,
+
+         "content": post.content,
+          "image_url": post.image_url,
+         "status": post.status,
+
+          "created_at": post.created_at,
+          "updated_at": post.updated_at,
+
+           "is_shared": False,
+           "shared_by_user_id": None,
+          "shared_at": None,
+
+         "likes_count": likes_count,
+         "liked_by_me": liked_by_me,
+        })
+
+    return archived_posts

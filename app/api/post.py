@@ -39,7 +39,7 @@ def create_post_route(
 
 @router.post("/upload", response_model=PostResponse)
 def create_post_with_image(
-    content: str = Form(...),
+    content: str = Form(""),
     image: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

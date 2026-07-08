@@ -3,9 +3,11 @@ from sqlalchemy import desc
 
 from app.models.post import Post
 from app.models.share import Share
+from app.models.like import Like
+from app.models.user import User
 
 
-def get_feed(db: Session):
+def get_feed(db: Session, current_user: User):
     """
     Unified feed:
     - posts (original)
@@ -32,7 +34,22 @@ def get_feed(db: Session):
     # ORIGINAL POSTS
     # ======================
     for post in posts:
-        feed.append({
+     likes_count = (
+        db.query(Like)
+       .filter(Like.post_id == post.id)
+       .count()
+     )
+
+     liked_by_me = (
+      db.query(Like)
+      .filter(
+        Like.post_id == post.id,
+        Like.user_id == current_user.id,
+      )
+       .first()
+       is not None
+     )
+     feed.append({
             "id": f"post_{post.id}",
             "type": "post",
 
@@ -49,6 +66,8 @@ def get_feed(db: Session):
             "is_shared": False,
             "shared_by_user_id": None,
             "shared_at": None,
+            "likes_count": likes_count,
+            "liked_by_me": liked_by_me,
         })
 
     # ======================
@@ -59,7 +78,21 @@ def get_feed(db: Session):
 
         if not post or post.status != "active":
             continue
+        likes_count = (
+        db.query(Like)
+        .filter(Like.post_id == post.id)
+        .count()
+      )
 
+        liked_by_me = (
+        db.query(Like)
+        .filter(
+          Like.post_id == post.id,
+          Like.user_id == current_user.id,
+      )
+      .first()
+      is not None
+     )
         feed.append({
             "id": f"share_{share.id}",
             "type": "share",
@@ -77,7 +110,9 @@ def get_feed(db: Session):
             "is_shared": True,
             "shared_by_user_id": share.user_id,
             "shared_at": share.created_at,
-        })
+            "likes_count": likes_count,
+            "liked_by_me": liked_by_me,
+    })
 
     # sort newest first
     feed.sort(key=lambda x: x["created_at"], reverse=True)
