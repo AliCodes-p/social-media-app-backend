@@ -21,6 +21,6 @@ class FeedResponse(BaseModel):
     shared_at: datetime | None
     
 
-    # NEW
     likes_count: int
+    comments_count: int
     liked_by_me: bool

@@ -1,20 +1,25 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 
 from app.models.post import Post
 from app.models.share import Share
 from app.models.like import Like
 from app.models.user import User
+from app.models.comment import Comment
 
 
 def get_feed(db: Session, current_user: User):
     """
     Unified feed:
-    - posts (original)
-    - shares (reshare events)
+    - Original posts
+    - Shared posts (reshare events)
+
+    Optimized to avoid the N+1 query problem by loading
+    likes and comments once and computing counts in memory.
     """
 
-    # 🔥 IMPORTANT: load fresh data
+    # ======================
+    # LOAD POSTS
+    # ======================
     posts = (
         db.query(Post)
         .filter(Post.status == "active")
@@ -28,28 +33,41 @@ def get_feed(db: Session, current_user: User):
         .all()
     )
 
+    # ======================
+    # LOAD ALL LIKES ONCE
+    # ======================
+    likes = db.query(Like).all()
+
+    likes_count_map = {}
+    liked_by_me_set = set()
+
+    for like in likes:
+        likes_count_map[like.post_id] = (
+            likes_count_map.get(like.post_id, 0) + 1
+        )
+
+        if like.user_id == current_user.id:
+            liked_by_me_set.add(like.post_id)
+
+    # ======================
+    # LOAD ALL COMMENTS ONCE
+    # ======================
+    comments = db.query(Comment).all()
+
+    comments_count_map = {}
+
+    for comment in comments:
+        comments_count_map[comment.post_id] = (
+            comments_count_map.get(comment.post_id, 0) + 1
+        )
+
     feed = []
 
     # ======================
     # ORIGINAL POSTS
     # ======================
     for post in posts:
-     likes_count = (
-        db.query(Like)
-       .filter(Like.post_id == post.id)
-       .count()
-     )
-
-     liked_by_me = (
-      db.query(Like)
-      .filter(
-        Like.post_id == post.id,
-        Like.user_id == current_user.id,
-      )
-       .first()
-       is not None
-     )
-     feed.append({
+        feed.append({
             "id": f"post_{post.id}",
             "type": "post",
 
@@ -66,33 +84,22 @@ def get_feed(db: Session, current_user: User):
             "is_shared": False,
             "shared_by_user_id": None,
             "shared_at": None,
-            "likes_count": likes_count,
-            "liked_by_me": liked_by_me,
+
+            "likes_count": likes_count_map.get(post.id, 0),
+            "liked_by_me": post.id in liked_by_me_set,
+
+            "comments_count": comments_count_map.get(post.id, 0),
         })
 
     # ======================
-    # SHARES (RESHARES)
+    # SHARED POSTS
     # ======================
     for share in shares:
         post = share.post
 
         if not post or post.status != "active":
             continue
-        likes_count = (
-        db.query(Like)
-        .filter(Like.post_id == post.id)
-        .count()
-      )
 
-        liked_by_me = (
-        db.query(Like)
-        .filter(
-          Like.post_id == post.id,
-          Like.user_id == current_user.id,
-      )
-      .first()
-      is not None
-     )
         feed.append({
             "id": f"share_{share.id}",
             "type": "share",
@@ -110,11 +117,16 @@ def get_feed(db: Session, current_user: User):
             "is_shared": True,
             "shared_by_user_id": share.user_id,
             "shared_at": share.created_at,
-            "likes_count": likes_count,
-            "liked_by_me": liked_by_me,
-    })
 
-    # sort newest first
+            "likes_count": likes_count_map.get(post.id, 0),
+            "liked_by_me": post.id in liked_by_me_set,
+
+            "comments_count": comments_count_map.get(post.id, 0),
+        })
+
+    # ======================
+    # SORT NEWEST FIRST
+    # ======================
     feed.sort(key=lambda x: x["created_at"], reverse=True)
 
     return feed

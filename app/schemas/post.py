@@ -17,15 +17,15 @@ class PostResponse(BaseModel):
 
     id: int
     user_id: int
+
     content: str
     image_url: str | None
     status: str
+
     created_at: datetime
     updated_at: datetime
 
 class ProfilePostResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     type: str
 
@@ -44,4 +44,5 @@ class ProfilePostResponse(BaseModel):
     shared_at: datetime | None
 
     likes_count: int
+    comments_count: int
     liked_by_me: bool

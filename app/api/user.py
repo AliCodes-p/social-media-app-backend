@@ -78,9 +78,11 @@ def get_my_archived_posts_route(
 # =========================
 @router.get("/{username}", response_model=UserProfileResponse)
 def get_user_by_username_route(
+    
     username: str,
     db: Session = Depends(get_db)
 ):
+    
     return get_user_by_username(db, username)
 
 # =========================

@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from fastapi import UploadFile
 from app.models.like import Like
 from app.models.post import Post
+from app.models.comment import Comment
 
 from app.services.upload_service import upload_image
 
@@ -71,6 +72,12 @@ def get_user_by_username(db: Session, username: str):
             .count()
         )
 
+        comments_count = (
+        db.query(Comment)
+        .filter(Comment.post_id == post.id)
+        .count()
+    )
+
         # For another user's profile, initially false
         liked_by_me = False
 
@@ -93,6 +100,7 @@ def get_user_by_username(db: Session, username: str):
             "shared_at": None,
 
             "likes_count": likes_count,
+            "comments_count": comments_count,
             "liked_by_me": liked_by_me,
         })
 
@@ -131,7 +139,7 @@ def update_user(
     current_user: User,
     user_data: UserUpdate,
 ):
-
+    
     # Get current user's profile
     profile = (
         db.query(Profile)
@@ -147,11 +155,18 @@ def update_user(
 
     # Update username
     if user_data.username is not None:
+        new_username = user_data.username.strip()
+
+        if not new_username:
+            raise HTTPException(
+                status_code=400,
+                detail="Username cannot be empty"
+            )
 
         existing_user = (
             db.query(User)
             .filter(
-                User.username == user_data.username,
+                User.username == new_username,
                 User.id != current_user.id,
             )
             .first()
@@ -163,7 +178,7 @@ def update_user(
                 detail="Username already exists"
             )
 
-        current_user.username = user_data.username
+        current_user.username = new_username
 
     # Update bio
     if user_data.bio is not None:
@@ -245,6 +260,11 @@ def get_my_profile(db: Session, current_user: User):
             .filter(Like.post_id == post.id)
             .count()
         )
+        comments_count = (
+        db.query(Comment)
+        .filter(Comment.post_id == post.id)
+        .count()
+    )
 
         liked_by_me = (
             db.query(Like)
@@ -275,6 +295,7 @@ def get_my_profile(db: Session, current_user: User):
             "shared_at": None,
 
             "likes_count": likes_count,
+            "comments_count": comments_count,
             "liked_by_me": liked_by_me,
         })
 
@@ -309,6 +330,11 @@ def get_my_archived_posts(db: Session, current_user: User):
             .filter(Like.post_id == post.id)
             .count()
         )
+        comments_count = (
+        db.query(Comment)
+        .filter(Comment.post_id == post.id)
+        .count()
+        )
 
         liked_by_me = (
             db.query(Like)
@@ -339,6 +365,7 @@ def get_my_archived_posts(db: Session, current_user: User):
           "shared_at": None,
 
          "likes_count": likes_count,
+         "comments_count": comments_count,
          "liked_by_me": liked_by_me,
         })
 

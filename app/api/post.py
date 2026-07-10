@@ -6,7 +6,7 @@ from app.services.upload_service import upload_image
 
 from app.db.dependency import get_db
 from app.models.user import User
-from app.schemas.post import PostCreate, PostUpdate, PostResponse
+from app.schemas.post import PostCreate, PostUpdate, PostResponse, ProfilePostResponse
 from app.services.post_service import (
     create_post,
     get_all_posts,
@@ -57,20 +57,24 @@ def create_post_with_image(
 # =========================
 # GET ALL POSTS
 # =========================
-@router.get("/", response_model=list[PostResponse])
-def get_all_posts_route(db: Session = Depends(get_db)):
-    return get_all_posts(db)
+@router.get("/", response_model=list[ProfilePostResponse])
+def get_all_posts_route(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_all_posts(db, current_user)
 
 
 # =========================
 # GET POST BY ID
 # =========================
-@router.get("/{post_id}", response_model=PostResponse)
+@router.get("/{post_id}", response_model=ProfilePostResponse)
 def get_post_route(
     post_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    return get_post_by_id(db, post_id)
+    return get_post_by_id(db, post_id, current_user)
 
 
 # =========================

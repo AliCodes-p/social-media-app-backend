@@ -80,6 +80,7 @@ def update_comment(
             detail="Comment not found",
         )
 
+    # Only the comment owner can edit
     if comment.user_id != current_user.id:
         raise HTTPException(
             status_code=403,
@@ -114,11 +115,26 @@ def delete_comment(
             detail="Comment not found",
         )
 
-    if comment.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not allowed",
+    post = (
+      db.query(Post)
+      .filter(Post.id == comment.post_id)
+      .first()
+       )
+
+    if not post:
+      raise HTTPException(
+        status_code=404,
+        detail="Post not found",
         )
+
+    if (
+     comment.user_id != current_user.id
+     and post.user_id != current_user.id
+    ):
+     raise HTTPException(
+        status_code=403,
+        detail="Not allowed",
+    )
 
     db.delete(comment)
     db.commit()
