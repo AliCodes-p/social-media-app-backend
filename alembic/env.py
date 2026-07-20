@@ -12,9 +12,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from app.db.database import Base
 
 from app.models.user import User
+from app.models.post import Post
+from app.models.comment import Comment
+from app.models.like import Like
+from app.models.share import Share
+from app.models.profile import Profile
+from app.models.follows import Follow
 from app.models.refresh_token import RefreshToken
 from app.models.otp_verification import OTPVerification
 from app.models.oauth_account import OAuthAccount
+from app.models.friend_request import FriendRequest
 
 
 # this is the Alembic Config object, which provides

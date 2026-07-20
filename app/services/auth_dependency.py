@@ -14,7 +14,6 @@ def get_current_user(
 
     token = request.cookies.get("access_token")
 
-    token = request.cookies.get("access_token")
 
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -27,7 +26,7 @@ def get_current_user(
     sub = payload.get("sub")
 
     try:
-        user_id = int(sub)
+        user_id = int(sub) #type: ignore
     except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, Query
 from app.schemas.user import UserUpdate
 from fastapi import UploadFile, File
-from app.services.user_service import upload_avatar , get_my_profile, get_my_archived_posts
+from app.services.user_service import upload_avatar, upload_cover, get_my_profile, get_my_archived_posts
 from app.services.auth_dependency import get_current_user
 
 from app.models.user import User
@@ -113,6 +113,22 @@ def upload_avatar_route(
         db,
         current_user,
         avatar,
+    )
+
+
+# =========================
+# UPLOAD COVER
+# =========================
+@router.post("/upload_cover")
+def upload_cover_route(
+    cover: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return upload_cover(
+        db,
+        current_user,
+        cover,
     )
 
 

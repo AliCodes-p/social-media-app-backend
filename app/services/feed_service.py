@@ -7,7 +7,13 @@ from app.models.user import User
 from app.models.comment import Comment
 
 
-def get_feed(db: Session, current_user: User):
+
+def get_feed(
+    db: Session,
+    current_user: User,
+    limit: int,
+    offset: int,
+):
     """
     Unified feed:
     - Original posts
@@ -18,25 +24,59 @@ def get_feed(db: Session, current_user: User):
     """
 
     # ======================
-    # LOAD POSTS
+    # FIND FOLLOWING USERS
     # ======================
-    posts = (
-        db.query(Post)
-        .filter(Post.status == "active")
-        .all()
+
+    following_ids = []
+
+    for follow in current_user.following:
+        following_ids.append(
+        follow.following_id
     )
 
-    shares = (
-        db.query(Share)
-        .join(Post)
-        .filter(Post.status == "active")
+    # include my own posts
+    following_ids.append(current_user.id)
+
+
+    # ======================
+    # LOAD FEED POSTS
+    # ======================
+
+    posts = (
+        db.query(Post)
+        .filter(
+            Post.status == "active",
+            Post.user_id.in_(following_ids)
+        )
         .all()
+    )
+    post_ids = [   #extracting post id because later you want like and coment for only these posts
+    post.id   
+    for post in posts
+    ]
+
+    shares = (
+    db.query(Share)
+    .filter(
+        Share.user_id.in_(following_ids)
+    )
+    .join(Post)
+    .filter(
+        Post.status == "active"
+    )
+    .all()
     )
 
     # ======================
     # LOAD ALL LIKES ONCE
     # ======================
-    likes = db.query(Like).all()
+    likes = (
+    db.query(Like)
+    .filter(
+        Like.post_id.in_(post_ids)
+    )
+    .all()
+    )
 
     likes_count_map = {}
     liked_by_me_set = set()
@@ -52,7 +92,13 @@ def get_feed(db: Session, current_user: User):
     # ======================
     # LOAD ALL COMMENTS ONCE
     # ======================
-    comments = db.query(Comment).all()
+    comments = (
+        db.query(Comment)
+        .filter(
+            Comment.post_id.in_(post_ids)
+        )
+        .all()
+    )
 
     comments_count_map = {}
 
@@ -127,6 +173,20 @@ def get_feed(db: Session, current_user: User):
     # ======================
     # SORT NEWEST FIRST
     # ======================
+    
     feed.sort(key=lambda x: x["created_at"], reverse=True)
 
-    return feed
+    # ======================
+    # PAGINATION
+    # ======================
+    total = len(feed)
+
+    items = feed[offset:offset + limit]
+
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + limit < total,
+    }

@@ -4,6 +4,7 @@ from sqlalchemy import String, Boolean
 from app.db.database import Base
 
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -51,5 +52,31 @@ class User(Base):
         uselist=False,
         cascade="all, delete-orphan"
     )
-    
-    
+
+    following = relationship(
+        "Follow",
+        foreign_keys="Follow.follower_id",
+        back_populates="follower",
+        cascade="all, delete-orphan"
+    )
+
+    followers = relationship(
+        "Follow", #just tell that there is a table of follow with which we have a releation 
+        foreign_keys="Follow.following_id", #swl alchemy wat reference to the mapped column
+        back_populates="following",
+        cascade="all, delete-orphan"
+    )
+
+    sent_friend_requests = relationship(
+    "FriendRequest",
+    foreign_keys="FriendRequest.sender_id",
+    back_populates="sender",
+    cascade="all, delete-orphan",
+    )
+
+    received_friend_requests = relationship(
+    "FriendRequest",
+    foreign_keys="FriendRequest.receiver_id",
+    back_populates="receiver",
+    cascade="all, delete-orphan",
+    )

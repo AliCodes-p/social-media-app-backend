@@ -228,6 +228,37 @@ def upload_avatar(
         "avatar_url": profile.avatar_url,
     }
 
+
+def upload_cover(
+    db: Session,
+    current_user: User,
+    cover: UploadFile,
+):
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == current_user.id)
+        .first()
+    )
+
+    if not profile:
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found",
+        )
+
+    cover_url = upload_image(cover)
+
+    profile.cover_url = cover_url
+
+    db.commit()
+    db.refresh(profile)
+
+    return {
+        "message": "Cover photo uploaded successfully",
+        "cover_url": profile.cover_url,
+    }
+
+
 def get_my_profile(db: Session, current_user: User):
 
     profile = (

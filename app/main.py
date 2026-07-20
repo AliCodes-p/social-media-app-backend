@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from app.api import follows
 from app.api.routes import router as root_router
 from app.api.auth import router as auth_router
 from app.api.post import router as post_router
@@ -9,6 +9,7 @@ from app.api.feed import router as feed_router
 from app.api.comment import router as comment_router
 from app.api.likes import router as like_router
 from app.api.share import router as share_router
+from app.api.friend_request import router as friend_request_router
 
 app = FastAPI(
     title="Social Media App",
@@ -49,3 +50,9 @@ app.include_router(like_router)
 
 # Share routes
 app.include_router(share_router)
+
+#follow routes
+app.include_router(follows.router)
+
+#friend request routes
+app.include_router(friend_request_router)

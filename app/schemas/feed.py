@@ -24,3 +24,10 @@ class FeedResponse(BaseModel):
     likes_count: int
     comments_count: int
     liked_by_me: bool
+
+class FeedPage(BaseModel):
+    items: list[FeedResponse]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
