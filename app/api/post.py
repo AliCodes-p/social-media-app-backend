@@ -9,8 +9,6 @@ from app.models.user import User
 from app.schemas.post import PostCreate, PostUpdate, PostResponse, ProfilePostResponse
 from app.services.post_service import (
     create_post,
-    get_all_posts,
-    get_post_by_id,
     update_post,
     delete_post,
     archive_post,
@@ -39,7 +37,7 @@ def create_post_route(
 
 @router.post("/upload", response_model=PostResponse)
 def create_post_with_image(
-    content: str = Form(""),
+    content: str = Form(""),   #Because we are uploading files, the request type is
     image: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -54,27 +52,7 @@ def create_post_with_image(
     return create_post(db, post_data, current_user)
 
 
-# =========================
-# GET ALL POSTS
-# =========================
-@router.get("/", response_model=list[ProfilePostResponse])
-def get_all_posts_route(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return get_all_posts(db, current_user)
 
-
-# =========================
-# GET POST BY ID
-# =========================
-@router.get("/{post_id}", response_model=ProfilePostResponse)
-def get_post_route(
-    post_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return get_post_by_id(db, post_id, current_user)
 
 
 # =========================

@@ -114,6 +114,7 @@ def delete_comment(
             status_code=404,
             detail="Comment not found",
         )
+    #chekc to see if post is valid
 
     post = (
       db.query(Post)

@@ -28,7 +28,7 @@ def share_post(db: Session, share_data: ShareCreate, current_user: User):
             status_code=404,
             detail="Post not found or is archived",
         )
-    # optional: prevent duplicate share (because you used UniqueConstraint)
+    # optional: prevent duplicate share 
     existing_share = db.query(Share).filter(
         Share.post_id == share_data.post_id,
         Share.user_id == current_user.id

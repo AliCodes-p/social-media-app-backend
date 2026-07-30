@@ -10,6 +10,8 @@ from app.api.comment import router as comment_router
 from app.api.likes import router as like_router
 from app.api.share import router as share_router
 from app.api.friend_request import router as friend_request_router
+from app.api import chat
+from app.api import admin
 
 app = FastAPI(
     title="Social Media App",
@@ -56,3 +58,7 @@ app.include_router(follows.router)
 
 #friend request routes
 app.include_router(friend_request_router)
+#chat router
+app.include_router(chat.router)
+
+app.include_router(admin.router)

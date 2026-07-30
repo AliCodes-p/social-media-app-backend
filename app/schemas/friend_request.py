@@ -20,5 +20,12 @@ class FriendRequestResponse(BaseModel):
     status: str
     updated_at: datetime
 
+
+class IncomingFriendRequestResponse(FriendRequestResponse):
+    sender_username: str
+    sender_avatar: str | None
+
+
 class FriendStatusResponse(BaseModel):
     status: str
+    request_id: int | None = None

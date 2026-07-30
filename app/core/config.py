@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):  # after reading match with class field 
     SECRET_KEY: str
     DATABASE_URL: str
 
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
 
-    class Config:
+    class Config:  # tell it to read value from env file
         env_file = ".env"
 
 

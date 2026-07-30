@@ -36,6 +36,7 @@ def get_all_users(db: Session):
         })
 
     return result
+
 def get_user_by_username(db: Session, username: str):
 
     result = (
@@ -112,27 +113,7 @@ def get_user_by_username(db: Session, username: str):
         "cover_url": profile.cover_url,
         "posts": profile_posts
     }
-def search_users(db: Session, query: str):
 
-    users = (
-        db.query(User, Profile)
-        .join(User.profile)
-        .filter(User.username.ilike(f"%{query}%"))
-        .all()
-    )
-
-    result = []
-
-    for user, profile in users:
-        result.append({
-            "id": user.id,
-            "username": user.username,
-            "bio": profile.bio,
-            "avatar_url": profile.avatar_url,
-            "cover_url": profile.cover_url,
-        })
-
-    return result
 
 def update_user(
     db: Session,

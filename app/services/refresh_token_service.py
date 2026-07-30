@@ -13,13 +13,14 @@ from app.services.token_service import (
     verify_token,
 )
 
-
+# user log in onother device so revoke previous token 
 def revoke_all_user_refresh_tokens(db: Session, user_id: int) -> None:
     db.query(RefreshToken).filter(
         RefreshToken.user_id == user_id,
         RefreshToken.is_revoked.is_(False),
     ).update({"is_revoked": True}, synchronize_session=False)
 
+# used while log out 
 
 def revoke_refresh_token(db: Session, token_value: str) -> None:
     stored_token = (
@@ -34,7 +35,7 @@ def revoke_refresh_token(db: Session, token_value: str) -> None:
     if stored_token:
         stored_token.is_revoked = True
 
-
+ #used to  check whether a refresh token is still valid before using it to create a new access token
 def get_valid_refresh_token(
     db: Session,
     token_value: str,
@@ -70,7 +71,7 @@ def parse_token_user_id(payload: dict) -> int:
     except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-
+ # used to check is token valid then return the user 
 def validate_refresh_token_cookie(
     db: Session,
     token_value: str,
@@ -95,7 +96,7 @@ def set_access_token_cookie(response: Response, access_token: str) -> None:
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,
+        httponly=True,  # Keep HttpOnly for security
         secure=False,
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
@@ -109,7 +110,7 @@ def set_auth_cookies(response: Response, tokens: dict) -> None:
     response.set_cookie(
         key="refresh_token",
         value=tokens["refresh_token"],
-        httponly=True,
+        httponly=True, #JavaScript cannot access this cookie.
         secure=False,
         samesite="lax",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,

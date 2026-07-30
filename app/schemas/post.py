@@ -1,16 +1,18 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict ,Field
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class PostCreate(BaseModel):
     content: str = Field(default="", max_length=5000)
     image_url: str | None = None
 
-    
+
 class PostUpdate(BaseModel):
     content: str | None = Field(default=None, max_length=5000)
     image_url: str | None = None
     status: str | None = None
+
 
 class PostResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -24,6 +26,7 @@ class PostResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
 
 class ProfilePostResponse(BaseModel):
     id: str
@@ -46,3 +49,26 @@ class ProfilePostResponse(BaseModel):
     likes_count: int
     comments_count: int
     liked_by_me: bool
+
+
+class AdminPostResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+
+    # Author information
+    username: str
+
+    # Post information
+    content: str
+    image_url: str | None
+    status: str
+
+    # Engagement statistics
+    likes_count: int
+    comments_count: int
+
+    # Timestamps
+    created_at: datetime
+    updated_at: datetime

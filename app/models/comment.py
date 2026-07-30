@@ -12,13 +12,13 @@ class Comment(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id"),
-        nullable=False
+    ForeignKey("users.id", ondelete="CASCADE"),
+    nullable=False
     )
 
     post_id: Mapped[int] = mapped_column(
-        ForeignKey("posts.id"),
-        nullable=False
+    ForeignKey("posts.id", ondelete="CASCADE"),
+    nullable=False
     )
 
     content: Mapped[str] = mapped_column(

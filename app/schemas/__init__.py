@@ -7,3 +7,6 @@ from .auth import *
 from .password_reset import *
 from .token import *
 from .user import *
+from .feed import *
+from .follows import *
+from .friend_request import *

@@ -1,5 +1,4 @@
 import secrets
-from typing import Any
 
 import httpx
 from fastapi import HTTPException, Request, Response
@@ -20,7 +19,7 @@ def _get_frontend_url() -> str:
 def _get_backend_url() -> str:
     return settings.BACKEND_URL or "http://localhost:8000"
 
-
+#creates callback url
 def _get_oauth_redirect_uri(provider: str) -> str:
     return f"{_get_backend_url().rstrip('/')}/auth/oauth/{provider}/callback"
 
@@ -72,15 +71,16 @@ def _clear_oauth_state_cookie(response: Response) -> None:
     response.delete_cookie(key="oauth_state", path="/")
     response.delete_cookie(key="oauth_provider", path="/")
 
+#Create the Google/GitHub authorization URL, store a security state 
+#value in a cookie, and redirect the user to Google/GitHub login page.
 
 async def start_oauth_flow(provider: str, response: Response) -> RedirectResponse:
     config = _get_provider_config(provider)
-
+   #check credential
     if not config["client_id"] or not config["client_secret"]:
         raise HTTPException(status_code=500, detail=f"{provider.title()} OAuth is not configured")
 
     state = secrets.token_urlsafe(24)
-    _set_oauth_state_cookie(response, provider, state)
 
     if provider == "google":
         params = {
@@ -92,7 +92,7 @@ async def start_oauth_flow(provider: str, response: Response) -> RedirectRespons
             "access_type": "offline",
             "prompt": "consent",
         }
-        import urllib.parse
+        import urllib.parse #convert dic into url format
 
         auth_url = f"{config['auth_url']}?{urllib.parse.urlencode(params)}"
         redirect = RedirectResponse(url=auth_url, status_code=302)
@@ -151,6 +151,7 @@ async def handle_oauth_callback(
                 token_response.raise_for_status()
                 token_data = token_response.json()
                 access_token = token_data.get("access_token")
+                #we have now access token but not user find who is the user
 
                 profile_response = await client.get(
                     config["user_info_url"],
@@ -257,7 +258,7 @@ def _get_or_create_oauth_user(
         if user:
             return user
 
-    # 2. Existing email/password account
+    # 2. Existing email/password account(check if acc with this email exist)
     existing_user = db.query(User).filter(User.email == email).first()
 
     if existing_user:

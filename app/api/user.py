@@ -21,7 +21,6 @@ from app.schemas.user import (
 from app.services.user_service import (
     get_all_users,
     get_user_by_username,
-    search_users,
     update_user
 )
 
@@ -41,15 +40,7 @@ def get_all_users_route(
     return get_all_users(db)
 
 
-# =========================
-# SEARCH USERS
-# =========================
-@router.get("/search", response_model=list[UserCardResponse])
-def search_users_route(
-    query: str = Query(..., min_length=1),
-    db: Session = Depends(get_db),
-):
-    return search_users(db, query)
+
 
 # =========================
 # GET MY PROFILE

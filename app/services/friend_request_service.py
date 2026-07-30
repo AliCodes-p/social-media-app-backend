@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException
 from sqlalchemy import and_,or_
 from app.models.user import User
@@ -138,7 +138,6 @@ def reject_friend_request(
         )
     db.delete(friend_request)
     db.commit()
-    db.refresh(friend_request)
 
     return friend_request
 
@@ -153,6 +152,10 @@ def get_friends(
 
     friendships = (
         db.query(FriendRequest)
+        .options(
+            joinedload(FriendRequest.sender).joinedload(User.profile),
+            joinedload(FriendRequest.receiver).joinedload(User.profile)
+        )
         .filter(
             FriendRequest.status == "accepted",
             or_(
@@ -187,12 +190,30 @@ def get_incoming_requests(
         db.query(FriendRequest)
         .filter(
             FriendRequest.receiver_id == current_user.id,
-            FriendRequest.status == "pending"
+            FriendRequest.status == "pending",
         )
         .all()
     )
 
-    return incoming_requests
+    result = []
+
+    for request in incoming_requests:
+        result.append({
+            "id": request.id,
+            "sender_id": request.sender_id,
+            "receiver_id": request.receiver_id,
+            "status": request.status,
+            "updated_at": request.updated_at,
+
+            "sender_username": request.sender.username,
+            "sender_avatar": (
+            request.sender.profile.avatar_url
+            if request.sender.profile
+            else None
+        ),
+        })
+
+    return result
 
 # WHEN USER SEND REQUEST AND VISIT THAT PROFILE HE NEED TO KNOW THAT IS THE REQUEST ACCEPTED OR NOT TO SHOW IN PROFILE 
 
@@ -243,17 +264,19 @@ def get_friend_status(
         friendship.status == "pending"
         and friendship.sender_id == current_user.id
     ):
-        return {
-            "status": "pending_sent"
-        }
+     return {
+        "status": "pending_sent",
+        "request_id": friendship.id,
+    }
 
     if (
         friendship.status == "pending"
         and friendship.receiver_id == current_user.id
     ):
         return {
-            "status": "pending_received"
-        }
+        "status": "pending_received",
+        "request_id": friendship.id,
+    }
 
     return {
         "status": friendship.status

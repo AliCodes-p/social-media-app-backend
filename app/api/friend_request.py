@@ -9,7 +9,8 @@ from app.models.user import User
 from app.schemas.friend_request import (
     FriendRequestCreate,
     FriendRequestResponse,
-    FriendStatusResponse    
+    FriendStatusResponse ,
+    IncomingFriendRequestResponse   
 )
 
 from app.services.friend_request_service import (
@@ -85,7 +86,7 @@ def friends(
     )
 # GET INCOMMING REQUEST 
 
-@router.get("/incoming",response_model=list[FriendRequestResponse]
+@router.get("/incoming",response_model=list[IncomingFriendRequestResponse]
 )
 def incoming_requests(
     db: Session = Depends(get_db),

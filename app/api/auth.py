@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from dbm import error
 from app.models.oauth_account import OAuthAccount
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -16,6 +15,7 @@ from app.schemas.auth import (
     ResendOtpRequest,
     VerifyOtpRequest,
 )
+from app.models.profile import Profile
 from app.services.auth_dependency import get_current_user
 from app.services.auth_service import (
     create_otp,
@@ -134,7 +134,7 @@ async def register(
     # 📧 Send OTP email
     # -----------------------------------
     try:
-        await send_otp_email(body.email, otp_entry.otp_code)
+        await send_otp_email(body.email, otp_entry.otp_code)  # in core email.py
     except Exception:
         db.delete(otp_entry)
         db.delete(user)
@@ -159,7 +159,7 @@ async def register(
 @router.post("/login")
 async def login(
     body: LoginRequest,
-    response: Response,
+    response: Response,  # used to later store the auth token
     db: Session = Depends(get_db),
 ):
     user, error = validate_login_credentials(db, body.email, body.password)
@@ -170,12 +170,23 @@ async def login(
         detail="Invalid email or password"
     )
 
+    if error == "user_blocked":
+      raise HTTPException(
+        status_code=403,
+        detail="Your account has been blocked by admin"
+    )
     if error == "oauth_user":
+      if user is None:
+        raise HTTPException(
+            status_code=500,
+            detail="User not found"
+        )
+
       oauth_account = (
         db.query(OAuthAccount)
-        .filter(OAuthAccount.user_id == user.id) 
+        .filter(OAuthAccount.user_id == user.id)
         .first()
-      )
+        )
 
       provider = (
         oauth_account.provider.title()
@@ -282,12 +293,23 @@ async def resend_otp(
 # GET CURRENT USER
 # -------------------------
 @router.get("/me")
-def get_me(user: User = Depends(get_current_user)):
+def get_me(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == user.id)
+        .first()
+    )
+
     return {
         "id": user.id,
         "username": user.username,
         "email": user.email,
+        "role": user.role,
         "is_verified": user.is_verified,
+        "avatar_url": profile.avatar_url if profile else None,
     }
 
 

@@ -7,6 +7,7 @@ engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+Base = declarative_base()  #Any class that inherits from this class represents a database table
 
 
+#flush also save data but not permanently

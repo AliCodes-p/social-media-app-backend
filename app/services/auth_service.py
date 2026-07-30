@@ -13,26 +13,6 @@ from app.models.otp_verification import OTPVerification
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-# -------------------------
-# AUTHENTICATE USER
-# -------------------------
-def authenticate_user(db: Session, email: str, password: str):
-    user = db.query(User).filter(User.email == email).first()
-
-    if not user:
-        return None
-
-    if not user.is_verified:
-        return None
-
-    # OAuth-only user check
-    if user.hashed_password is None:
-        return None
-
-    if not verify_password(password, user.hashed_password):
-       return None
-
-    return user
 
 
 def validate_login_credentials(db: Session, email: str, password: str):
@@ -40,6 +20,10 @@ def validate_login_credentials(db: Session, email: str, password: str):
 
     if not user:
         return None, "invalid_credentials"
+
+    # blocked user check
+    if user.is_blocked:
+        return None, "user_blocked"
 
     # OAuth-only account
     if user.hashed_password is None:
@@ -91,7 +75,7 @@ def get_otp_expiry() -> datetime:
 
 
 # -------------------------
-# REGISTER USER (FIXED - OTP TABLE VERSION)
+# REGISTER USER (FIXED - OTP TABLE VERSION) handle sign up
 # -------------------------
 def register_user(db: Session, username: str, email: str, password: str):
 
@@ -124,15 +108,10 @@ def register_user(db: Session, username: str, email: str, password: str):
     otp = generate_otp()
     expiry = get_otp_expiry()
 
-    otp_entry = OTPVerification(
-        user_id=user.id,
-        otp_code=otp,
-        purpose="register",
-        expires_at=expiry,
-        is_used=False
+    create_otp(
+        db,
+        user.id,
+        "register"
     )
-
-    db.add(otp_entry)
-    db.commit()
 
     return user

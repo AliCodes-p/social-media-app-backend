@@ -12,7 +12,7 @@ class Profile(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
 
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id"),
+        ForeignKey("users.id",ondelete="CASCADE"),
         nullable=False,
         unique=True
     )
