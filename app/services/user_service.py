@@ -11,6 +11,7 @@ from app.services.upload_service import upload_image
 from app.schemas.user import UserUpdate
 from app.models.user import User
 from app.models.profile import Profile
+from app.models.follows import Follow
 
 
 def get_all_users(db: Session):
@@ -53,6 +54,18 @@ def get_user_by_username(db: Session, username: str):
         )
 
     user, profile = result
+
+    followers_count = (
+        db.query(Follow)
+        .filter(Follow.following_id == user.id)
+        .count()
+    )
+
+    following_count = (
+        db.query(Follow)
+        .filter(Follow.follower_id == user.id)
+        .count()
+    )
 
     posts = (
         db.query(Post)
@@ -111,7 +124,10 @@ def get_user_by_username(db: Session, username: str):
         "bio": profile.bio,
         "avatar_url": profile.avatar_url,
         "cover_url": profile.cover_url,
-        "posts": profile_posts
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "posts_count": len(profile_posts),
+        "posts": profile_posts,
     }
 
 
@@ -169,12 +185,27 @@ def update_user(
     db.refresh(current_user)
     db.refresh(profile)
 
+    followers_count = (
+        db.query(Follow)
+        .filter(Follow.following_id == current_user.id)
+        .count()
+    )
+
+    following_count = (
+        db.query(Follow)
+        .filter(Follow.follower_id == current_user.id)
+        .count()
+    )
+
     return {
         "id": current_user.id,
         "username": current_user.username,
         "bio": profile.bio,
         "avatar_url": profile.avatar_url,
         "cover_url": profile.cover_url,
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "posts_count": 0,
     }
 
 #UPLOAD AVATAR
@@ -312,13 +343,28 @@ def get_my_profile(db: Session, current_user: User):
         })
 
 
+    followers_count = (
+        db.query(Follow)
+        .filter(Follow.following_id == current_user.id)
+        .count()
+    )
+
+    following_count = (
+        db.query(Follow)
+        .filter(Follow.follower_id == current_user.id)
+        .count()
+    )
+
     return {
         "id": current_user.id,
         "username": current_user.username,
         "bio": profile.bio,
         "avatar_url": profile.avatar_url,
         "cover_url": profile.cover_url,
-        "posts": profile_posts
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "posts_count": len(profile_posts),
+        "posts": profile_posts,
     }
 #=========================Get my archived posts==========================
 

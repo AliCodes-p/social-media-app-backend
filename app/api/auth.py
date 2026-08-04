@@ -159,22 +159,28 @@ async def register(
 @router.post("/login")
 async def login(
     body: LoginRequest,
-    response: Response,  # used to later store the auth token
+    response: Response,
     db: Session = Depends(get_db),
 ):
     user, error = validate_login_credentials(db, body.email, body.password)
 
+    if error == "no_users":
+        raise HTTPException(
+            status_code=404,
+            detail="No accounts exist yet. Please register first.",
+        )
+
     if error == "invalid_credentials":
-      raise HTTPException(
-        status_code=401,
-        detail="Invalid email or password"
-    )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
 
     if error == "user_blocked":
-      raise HTTPException(
-        status_code=403,
-        detail="Your account has been blocked by admin"
-    )
+        raise HTTPException(
+            status_code=403,
+            detail="Your account has been blocked by admin"
+        )
     if error == "oauth_user":
       if user is None:
         raise HTTPException(

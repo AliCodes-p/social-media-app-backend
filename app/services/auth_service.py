@@ -16,16 +16,20 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def validate_login_credentials(db: Session, email: str, password: str):
+    # Check if any users exist
+    total_users = db.query(User).count()
+
+    if total_users == 0:
+        return None, "no_users"
+
     user = db.query(User).filter(User.email == email).first()
 
     if not user:
         return None, "invalid_credentials"
 
-    # blocked user check
     if user.is_blocked:
         return None, "user_blocked"
 
-    # OAuth-only account
     if user.hashed_password is None:
         return user, "oauth_user"
 

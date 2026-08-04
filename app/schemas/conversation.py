@@ -26,4 +26,6 @@ class ConversationResponse(BaseModel):
 
     last_message: LastMessage | None = None
 
+    unread_count: int = 0
+
     model_config = ConfigDict(from_attributes=True)

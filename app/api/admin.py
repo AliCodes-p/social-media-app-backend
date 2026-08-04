@@ -76,10 +76,11 @@ def delete_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    return delete_user_service(
-        db,
-        user_id
-    )
+   return delete_user_service(
+    db,
+    user_id,
+    current_user,
+)
 
 
 @router.patch("/users/{user_id}/block")
@@ -90,7 +91,8 @@ def block_user(
 ):
     return block_user_service(
         db,
-        user_id
+        user_id,
+        current_user,
     )
 
 @router.patch("/users/{user_id}/unblock")

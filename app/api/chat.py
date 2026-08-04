@@ -18,6 +18,7 @@ from app.services.chat_service import (
     get_user_conversations,
     get_conversation_participants,
     mark_messages_as_read,
+    get_unread_message_counts,
 )
 from app.services.token_service import verify_token
 
@@ -80,6 +81,16 @@ def list_messages(
         )
 
     return messages
+
+@router.get("/unread-count")
+def unread_message_count(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_unread_message_counts(
+        db,
+        current_user.id,
+    )
 
 
 @router.post("/messages/{conversation_id}/read")

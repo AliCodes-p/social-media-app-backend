@@ -185,12 +185,20 @@ def get_user_conversations(
             .first()
         )
 
+        unread_count = (
+            db.query(Message)
+            .filter(
+                Message.conversation_id == conversation.id,
+                Message.sender_id != user_id,
+                Message.status == "sent",
+            )
+            .count()
+        )
+
         result.append(
             {
                 "id": conversation.id,
-
                 "created_at": conversation.created_at,
-
                 "updated_at": conversation.updated_at,
 
                 "other_user": {
@@ -211,6 +219,8 @@ def get_user_conversations(
                     if last_message
                     else None
                 ),
+
+                "unread_count": unread_count,
             }
         )
 
@@ -259,3 +269,38 @@ def mark_messages_as_read(
         db.commit()
     
     return updated_message_ids
+
+def get_unread_message_counts(
+    db: Session,
+    user_id: int
+):
+    """
+    Return total unread messages and unread count per conversation
+    for the current user only.
+    """
+
+    unread_messages = (
+        db.query(Message)
+        .join(
+            ConversationParticipant,
+            ConversationParticipant.conversation_id == Message.conversation_id
+        )
+        .filter(
+            ConversationParticipant.user_id == user_id,
+            Message.sender_id != user_id,
+            Message.status == "sent",
+        )
+        .all()
+    )
+
+    conversations = {}
+
+    for message in unread_messages:
+        conversations[message.conversation_id] = (
+            conversations.get(message.conversation_id, 0) + 1
+        )
+
+    return {
+        "total_unread": len(unread_messages),
+        "conversations": conversations,
+    }

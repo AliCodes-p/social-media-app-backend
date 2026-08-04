@@ -121,6 +121,7 @@ def update_user(
 def delete_user(
     db: Session,
     user_id: int,
+    current_user: User,
 ):
     user = (
         db.query(User)
@@ -133,6 +134,12 @@ def delete_user(
             status_code=404,
             detail="User not found",
         )
+    
+    if current_user.id == user.id:
+        raise HTTPException(
+          status_code=400,
+          detail="You cannot delete your own admin account.",
+    )
 
     db.delete(user)
     db.commit()
@@ -144,6 +151,7 @@ def delete_user(
 def block_user(
     db: Session,
     user_id: int,
+    current_user: User,
 ):
     user = (
         db.query(User)
@@ -156,6 +164,11 @@ def block_user(
             status_code=404,
             detail="User not found",
         )
+    if current_user.id == user.id:
+        raise HTTPException(
+          status_code=400,
+          detail="You cannot block your own admin account.",
+    )
 
     user.is_blocked = True
 
@@ -233,7 +246,7 @@ def get_post_by_id(
     post = (
         db.query(Post)
         .options(
-            selectinload(Post.user),  #loading the data erlier so it shoul dnot exexute multiple queries while looping
+            selectinload(Post.user),  #loading the data erlier so it should not exexute multiple queries while looping
             selectinload(Post.likes),
             selectinload(Post.comments),
         )

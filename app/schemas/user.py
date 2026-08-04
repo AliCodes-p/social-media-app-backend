@@ -27,6 +27,9 @@ class UserProfileResponse(BaseModel):
     bio: str | None = None
     avatar_url: str | None = None
     cover_url: str | None = None
+    followers_count: int = 0
+    following_count: int = 0
+    posts_count: int = 0
     posts: list[ProfilePostResponse] = []
 
 

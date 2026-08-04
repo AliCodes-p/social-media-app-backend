@@ -1,8 +1,9 @@
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.user import User
-from app.models.follows import Follow 
-from fastapi import HTTPException 
+from app.models.follows import Follow
+from fastapi import HTTPException
 
 def follow_user(
     db: Session,
@@ -42,11 +43,20 @@ def follow_user(
         )
 
     follow = Follow(
-    follower_id=current_user.id,
-    following_id=user_id
+        follower_id=current_user.id,
+        following_id=user_id,
     )
     db.add(follow)
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="You are already following this user.",
+        )
+
     db.refresh(follow)
     return follow
 
@@ -83,25 +93,15 @@ def get_following(
     Get all users that a user is following
     """
 
-    follows = (
-        db.query(Follow)
-        .filter(
-            Follow.follower_id == user_id
-        )
+    return (
+        db.query(User)
+        .join(Follow, Follow.following_id == User.id)
+        .filter(Follow.follower_id == user_id)
         .all()
     )
 
-    following_users = []
 
-    for follow in follows:
-        following_users.append(
-            follow.following
-        )
-
-    return following_users
-
-
- # USE TO DECIDE WHETHER TO SHOW FOLLOWING OR NOT ON FRONTEND 
+# USE TO DECIDE WHETHER TO SHOW FOLLOWING OR NOT ON FRONTEND 
 
 def is_following(
     db: Session,
@@ -112,12 +112,12 @@ def is_following(
     Check if follower_id is following following_id
     """
 
-    follow = (
+    return (
         db.query(Follow)
         .filter(
             Follow.follower_id == follower_id,
-            Follow.following_id == following_id
+            Follow.following_id == following_id,
         )
         .first()
+        is not None
     )
-    return follow is not None
