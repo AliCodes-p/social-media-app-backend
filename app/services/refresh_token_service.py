@@ -96,9 +96,9 @@ def set_access_token_cookie(response: Response, access_token: str) -> None:
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,  # Keep HttpOnly for security
-        secure=False,
-        samesite="lax",
+        httponly=True,
+        secure=True,
+        samesite="none",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
@@ -110,9 +110,9 @@ def set_auth_cookies(response: Response, tokens: dict) -> None:
     response.set_cookie(
         key="refresh_token",
         value=tokens["refresh_token"],
-        httponly=True, #JavaScript cannot access this cookie.
-        secure=False,
-        samesite="lax",
+        httponly=True,
+        secure=True,
+        samesite="none",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         path="/",
     )

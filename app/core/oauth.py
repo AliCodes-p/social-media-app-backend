@@ -51,20 +51,22 @@ def _set_oauth_state_cookie(response: Response, provider: str, state: str) -> No
         key="oauth_state",
         value=state,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=True,
+        samesite="none",
         max_age=600,
         path="/",
     )
+
     response.set_cookie(
         key="oauth_provider",
         value=provider,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=True,
+        samesite="none",
         max_age=600,
         path="/",
     )
+
 
 
 def _clear_oauth_state_cookie(response: Response) -> None:
