@@ -32,7 +32,7 @@ router = APIRouter(
 
 
 # Send friend request
-@router.post("/",response_model=FriendRequestResponse)
+@router.post("",response_model=FriendRequestResponse)
 def send_request(
     request: FriendRequestCreate,
     db: Session = Depends(get_db),
