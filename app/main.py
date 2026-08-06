@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
 from app.api import follows
 from app.api.routes import router as root_router
 from app.api.auth import router as auth_router
@@ -13,10 +15,20 @@ from app.api.friend_request import router as friend_request_router
 from app.api import chat
 from app.api import admin
 
+
 app = FastAPI(
     title="Social Media App",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False
 )
+
+
+# Trust HTTPS information coming from Nginx reverse proxy
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts="*"
+)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,36 +42,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Root routes (health check, etc.)
 app.include_router(root_router)
 
+
 # Auth routes
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+app.include_router(
+    auth_router,
+    prefix="/auth",
+    tags=["Auth"]
+)
+
 
 # Post routes
 app.include_router(post_router)
 
+
 # User routes
 app.include_router(users_router)
 
-#feed routes
+
+# Feed routes
 app.include_router(feed_router)
+
 
 # Comment routes
 app.include_router(comment_router)
 
+
 # Like routes
 app.include_router(like_router)
+
 
 # Share routes
 app.include_router(share_router)
 
-#follow routes
+
+# Follow routes
 app.include_router(follows.router)
 
-#friend request routes
+
+# Friend request routes
 app.include_router(friend_request_router)
-#chat router
+
+
+# Chat routes
 app.include_router(chat.router)
 
+
+# Admin routes
 app.include_router(admin.router)
