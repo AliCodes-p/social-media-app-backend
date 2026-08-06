@@ -24,7 +24,7 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 # =========================
 # CREATE POST
 # =========================
-@router.post("/", response_model=PostResponse)
+@router.post("", response_model=PostResponse)
 def create_post_route(
     post_data: PostCreate,
     db: Session = Depends(get_db),
