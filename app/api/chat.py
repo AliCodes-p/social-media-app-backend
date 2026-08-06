@@ -210,30 +210,27 @@ async def websocket_endpoint(
     db: Session = Depends(get_db),
 ):
     """
-    WebSocket endpoint with JWT authentication via cookies.
-    Browser automatically includes HttpOnly cookies in the handshake.
+    WebSocket endpoint with JWT authentication.
     """
-    
+
     # Authenticate user before accepting connection
     try:
         user = await get_websocket_user(websocket, db)
     except WebSocketException as e:
         await websocket.close(code=e.code, reason=e.reason)
         return
-    
+
     await manager.connect(
         user.id,
-        websocket
+        websocket,
     )
 
     try:
         while True:
-
             data = await websocket.receive_json()
 
             conversation_id = data["conversation_id"]
             content = data["content"]
-
 
             message = save_message(
                 db=db,
@@ -241,7 +238,6 @@ async def websocket_endpoint(
                 sender_id=user.id,
                 content=content,
             )
-
 
             message_data = {
                 "id": message.id,
@@ -252,29 +248,26 @@ async def websocket_endpoint(
                 "created_at": message.created_at.isoformat(),
             }
 
-
             participants = get_conversation_participants(
                 db,
-                conversation_id
+                conversation_id,
             )
 
-
+            # Send only to the OTHER participant(s)
             for participant in participants:
-
                 participant_id = participant[0]
+
+                if participant_id == user.id:
+                    continue
 
                 await manager.send_personal_message(
                     user_id=participant_id,
-                    message=message_data
+                    message=message_data,
                 )
 
-
     except WebSocketDisconnect:
-
         manager.disconnect(user.id)
 
-
     except Exception as e:
-
         manager.disconnect(user.id)
         print(e)
