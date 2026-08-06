@@ -257,9 +257,6 @@ async def websocket_endpoint(
             for participant in participants:
                 participant_id = participant[0]
 
-                if participant_id == user.id:
-                    continue
-
                 await manager.send_personal_message(
                     user_id=participant_id,
                     message=message_data,
