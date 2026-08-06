@@ -146,55 +146,63 @@ async def mark_conversation_as_read(
 
 #WEB Socket Endpoint
 
-async def get_websocket_user(websocket: WebSocket, db: Session) -> User:
-    """
-    Validate JWT token from WebSocket cookies and return the authenticated user.
-    """
-    # Read access_token from WebSocket cookies
-    token = websocket.cookies.get("access_token")
-    
-    # Debug logging to check if cookie is received
-    print(f"DEBUG: WebSocket cookies received: {dict(websocket.cookies)}")
-    print(f"DEBUG: access_token cookie present: {token is not None}")
-    
+async def get_websocket_user(
+    websocket: WebSocket,
+    db: Session
+) -> User:
+
+    token = websocket.query_params.get("token")
+
+    print("DEBUG WS TOKEN:", token)
+
     if not token:
         raise WebSocketException(
             code=status.WS_1008_POLICY_VIOLATION,
             reason="No authentication token provided"
         )
-    
-    payload = verify_token(token, expected_type="access")
-    
+
+    payload = verify_token(
+        token,
+        expected_type="access"
+    )
+
     if not payload:
         raise WebSocketException(
             code=status.WS_1008_POLICY_VIOLATION,
-            reason="Invalid or expired token"
+            reason="Invalid token"
         )
-    
-    user_id_str = payload.get("sub")
-    if not user_id_str:
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Invalid token payload"
-        )
-    
-    try:
-        user_id = int(user_id_str)
-    except (TypeError, ValueError):
-        raise WebSocketException(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Invalid user ID in token"
-        )
-    
-    user = db.query(User).filter(User.id == user_id).first()
+
+    user_id = int(payload["sub"])
+
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
     if not user:
         raise WebSocketException(
             code=status.WS_1008_POLICY_VIOLATION,
             reason="User not found"
         )
-    
+
     return user
 
+@router.get("/ws-token")
+def websocket_token(
+    current_user: User = Depends(get_current_user)
+):
+    from app.services.token_service import create_access_token
+
+    token = create_access_token(
+        {
+            "sub": str(current_user.id)
+        }
+    )
+
+    return {
+        "token": token
+    }
 
 @router.websocket("/ws")
 async def websocket_endpoint(
