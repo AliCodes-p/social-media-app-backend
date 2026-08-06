@@ -18,8 +18,7 @@ from app.api import admin
 
 app = FastAPI(
     title="Social Media App",
-    version="1.0.0",
-    redirect_slashes=False
+    version="1.0.0"
 )
 
 
