@@ -10,25 +10,27 @@ def get_current_user(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    print("=" * 60)
+    print("PATH:", request.url.path)
+    print("COOKIE HEADER:", request.headers.get("cookie"))
+    print("ACCESS COOKIE:", request.cookies.get("access_token"))
+    print("REFRESH COOKIE:", request.cookies.get("refresh_token"))
+
     token = request.cookies.get("access_token")
 
     if not token:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated"
-        )
+        print("NO ACCESS TOKEN")
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-    payload = verify_token(
-        token,
-        expected_type="access"
-    )
+    payload = verify_token(token, expected_type="access")
+
+    print("PAYLOAD:", payload)
 
     if not payload:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid token"
-        )
+        print("INVALID TOKEN")
+        raise HTTPException(status_code=401, detail="Invalid token")
 
+    
     sub = payload.get("sub")
 
     try:
