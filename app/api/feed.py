@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=FeedPage)
+@router.get("", response_model=FeedPage)
 def get_feed_route(
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0), #where to start 
