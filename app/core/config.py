@@ -11,8 +11,8 @@ class Settings(BaseSettings):  # after reading match with class field
     GITHUB_CLIENT_ID: str | None = None
     GITHUB_CLIENT_SECRET: str | None = None
 
-    FRONTEND_URL: str = "http://localhost:3000"
-    BACKEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "https://social-media-app-frontend-psi.vercel.app"
+    BACKEND_URL: str = "https://socialsphereb.duckdns.org"
 
     # =========================
     # Cloudinary
