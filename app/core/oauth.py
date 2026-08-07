@@ -21,7 +21,7 @@ def _get_backend_url() -> str:
 
 #creates callback url
 def _get_oauth_redirect_uri(provider: str) -> str:
-    return f"{_get_backend_url().rstrip('/')}/auth/oauth/{provider}/callback"
+    return f"{_get_frontend_url().rstrip('/')}/auth/oauth/{provider}/callback"
 
 
 def _get_provider_config(provider: str) -> dict[str, str]:
