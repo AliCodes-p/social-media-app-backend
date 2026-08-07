@@ -131,6 +131,7 @@ async def handle_oauth_callback(
     print("Returned state:", state)
     print("Stored state:", request.cookies.get("oauth_state"))
     print("Stored provider:", request.cookies.get("oauth_provider"))
+    print("All callback cookies:", request.cookies)
     
 
     if stored_state != state or stored_provider != provider:
