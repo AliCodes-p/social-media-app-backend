@@ -21,7 +21,7 @@ def _get_backend_url() -> str:
 
 #creates callback url
 def _get_oauth_redirect_uri(provider: str) -> str:
-    return f"{_get_frontend_url().rstrip('/')}/auth/oauth/{provider}/callback"
+    return f"{_get_backend_url().rstrip('/')}/auth/oauth/{provider}/callback"
 
 
 def _get_provider_config(provider: str) -> dict[str, str]:
@@ -52,7 +52,7 @@ def _set_oauth_state_cookie(response: Response, provider: str, state: str) -> No
         value=state,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         max_age=600,
         path="/",
     )
@@ -62,7 +62,7 @@ def _set_oauth_state_cookie(response: Response, provider: str, state: str) -> No
         value=provider,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         max_age=600,
         path="/",
     )
