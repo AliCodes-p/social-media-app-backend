@@ -52,7 +52,7 @@ def _set_oauth_state_cookie(response: Response, provider: str, state: str) -> No
         value=state,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=600,
         path="/",
     )
@@ -62,7 +62,7 @@ def _set_oauth_state_cookie(response: Response, provider: str, state: str) -> No
         value=provider,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=600,
         path="/",
     )
