@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, Response
 from sqlalchemy.orm import Session
 
+from app.core.cookies import base_cookie_params
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.services.token_service import (
@@ -96,11 +97,7 @@ def set_access_token_cookie(response: Response, access_token: str) -> None:
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        path="/",
+        **base_cookie_params(max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60),
     )
 
 
@@ -110,17 +107,14 @@ def set_auth_cookies(response: Response, tokens: dict) -> None:
     response.set_cookie(
         key="refresh_token",
         value=tokens["refresh_token"],
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-        path="/",
+        **base_cookie_params(max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60),
     )
 
 
 def clear_auth_cookies(response: Response) -> None:
-    response.delete_cookie(key="access_token", path="/")
-    response.delete_cookie(key="refresh_token", path="/")
+    cookie_params = base_cookie_params()
+    response.delete_cookie(key="access_token", **cookie_params)
+    response.delete_cookie(key="refresh_token", **cookie_params)
 
 
 def issue_auth_tokens(response: Response, db: Session, user: User) -> None:

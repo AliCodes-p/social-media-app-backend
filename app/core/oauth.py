@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.cookies import base_cookie_params
 from app.models.oauth_account import OAuthAccount
 from app.models.user import User
 from app.services.auth_service import hash_password
@@ -16,12 +17,10 @@ def _get_frontend_url() -> str:
     return settings.FRONTEND_URL or "http://localhost:3000"
 
 
-def _get_backend_url() -> str:
-    return settings.BACKEND_URL or "http://localhost:8000"
-
-#creates callback url
+# OAuth callback must hit the frontend /backend proxy so the oauth_state cookie
+# (set during start on the frontend origin) is present on the callback request.
 def _get_oauth_redirect_uri(provider: str) -> str:
-    return f"{_get_backend_url().rstrip('/')}/auth/oauth/{provider}/callback"
+    return f"{_get_frontend_url().rstrip('/')}/backend/auth/oauth/{provider}/callback"
 
 
 def _get_provider_config(provider: str) -> dict[str, str]:
@@ -46,32 +45,20 @@ def _get_provider_config(provider: str) -> dict[str, str]:
     raise HTTPException(status_code=404, detail="Unsupported OAuth provider")
 
 
+OAUTH_STATE_MAX_AGE = 600
+
+
 def _set_oauth_state_cookie(response: Response, provider: str, state: str) -> None:
-    response.set_cookie(
-        key="oauth_state",
-        value=state,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=600,
-        path="/",
-    )
+    cookie_params = base_cookie_params(max_age=OAUTH_STATE_MAX_AGE)
 
-    response.set_cookie(
-        key="oauth_provider",
-        value=provider,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=600,
-        path="/",
-    )
-
+    response.set_cookie(key="oauth_state", value=state, **cookie_params)
+    response.set_cookie(key="oauth_provider", value=provider, **cookie_params)
 
 
 def _clear_oauth_state_cookie(response: Response) -> None:
-    response.delete_cookie(key="oauth_state", path="/")
-    response.delete_cookie(key="oauth_provider", path="/")
+    cookie_params = base_cookie_params()
+    response.delete_cookie(key="oauth_state", **cookie_params)
+    response.delete_cookie(key="oauth_provider", **cookie_params)
 
 #Create the Google/GitHub authorization URL, store a security state 
 #value in a cookie, and redirect the user to Google/GitHub login page.
