@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.cookies import base_cookie_params
 from app.models.oauth_account import OAuthAccount
 from app.models.user import User
+from app.models.profile import Profile
 from app.services.auth_service import hash_password
 from app.services.refresh_token_service import issue_auth_tokens
 
@@ -302,6 +303,8 @@ def _get_or_create_oauth_user(
             provider_user_id=provider_user_id,
         )
     )
+
+    db.add(Profile(user_id=user.id))
 
     db.commit()
     db.refresh(user)
